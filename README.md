@@ -204,55 +204,147 @@ python -m bedwatch.cli evaluate --pred outputs/ --gt csv/combined_ground_truth_d
 
 ---
 
-## 8. Evaluation & Benchmark Results
+## 8. Evaluation Results
 
-Evaluated on the full 190.07-second test video (`og.mp4`):
+**Data and caveats.** One 190.07 s AI-generated video (`og.mp4`, one subject, four outfits, two camera views), labelled by hand at one-second resolution and reviewed against the video. All numbers below are **in-sample**: [CONFIRM: the thresholds were developed while looking at this video]. They show what the pipeline does on this footage and are not an estimate of performance on new footage. Events are scored on only 5 exits, 3 returns and 1 floor event, so each missed event moves a percentage by 20 to 33 points. Raw counts are shown next to percentages.
 
-### A. State Classification Performance
-- **State Tolerant Accuracy ($\pm 1\text{s}$)**: **`80.0%`**
-- **State Strict Accuracy**: **`66.3%`**
-- **State Macro F1 Score**: **`0.658`**
+All figures come from one run: `outputs/eval_results.json`, `outputs/summary.json`, `outputs/timeline.txt`, `outputs/events.json`. [CONFIRM: commit hash and config of this run]
 
-### B. Activity Duration Accuracy
-| Activity State | Ground Truth | Predicted | Absolute Error |
+### 8.1 State classification
+
+| Metric | Value |
+|---|---|
+| Strict accuracy (1 Hz) | 70.5% (134 of 190 s) |
+| Tolerant accuracy (±1 s at boundaries) | 83.2% |
+| Macro F1 | 0.707 |
+
+Per-state results (rows are ground truth, from the confusion matrix):
+
+| State | GT (s) | Correct (s) | Recall | Where the rest went |
+|---|---|---|---|---|
+| LYING_IN_BED | 52 | 50 | 96% | 2 s sitting on bed |
+| SITTING_ON_BED | 43 | 40 | 93% | 3 s walking |
+| SITTING_OUTSIDE_BED | 9 | 9 | 100% | none |
+| STANDING | 28 | 14 | 50% | 11 s sitting on bed, 1 s sitting outside, 1 s unknown, 1 s walking |
+| WALKING | 40 | 11 | 28% | 23 s standing, 6 s sitting on bed |
+| OUT_OF_BED | 10 | 3 | 30% | 4 s walking, 2 s sitting on bed, 1 s standing |
+| UNKNOWN | 2 | 2 | 100% | one extra second predicted unknown (from STANDING) |
+| LYING_ON_FLOOR | 6 | 5 | 83% | 1 s sitting on bed |
+
+The two weak states are WALKING and STANDING. Predicted STANDING is only 37% precise (14 of 38 s), because most walking is labelled standing (Failure case F1).
+
+### 8.2 Duration estimation
+
+From `summary.json`. Errors are absolute, in seconds.
+
+| State | Ground truth | Predicted | Error |
 |---|---|---|---|
-| `LYING_IN_BED` | 52s | 50s | **2s** |
-| `SITTING_ON_BED` | 43s | 66s | 23s |
-| `STANDING` | 28s | 23s | **5s** |
-| `WALKING` | 40s | 18s | 22s |
-| `SITTING_OUTSIDE_BED` | 9s | 21s | 12s |
-| `OUT_OF_BED` | 10s | 4s | **6s** |
-| `UNKNOWN` | 2s | 3s | **1s** |
-| `LYING_ON_FLOOR` | 6s | 5s | **1s** |
+| LYING_IN_BED | 52 s | 50 s | 2 s |
+| SITTING_ON_BED | 43 s | 65 s | 22 s |
+| STANDING | 28 s | 38 s | 10 s |
+| WALKING | 40 s | 18 s | 22 s |
+| SITTING_OUTSIDE_BED | 9 s | 9 s | 0 s |
+| OUT_OF_BED | 10 s | 2 s | 8 s |
+| UNKNOWN | 2 s | 3 s | 1 s |
+| LYING_ON_FLOOR | 6 s | 5 s | 1 s |
+| Total | 190 s | 190 s | 0 s |
 
-### C. Safety Event Detection
-| Event Type | Ground Truth | Detected | True Positives | Precision | Recall | F1 |
-|---|---|---|---|---|---|---|
-| **`floor_lying`** | 1 | 1 | 1 | **100.0%** | **100.0%** | **1.000** |
-| **`bed_exit`** | 5 | 3 | 2 | **66.7%** | 40.0% | 0.500 |
-| **`bed_return`** | 3 | 3 | 2 | 66.7% | 66.7% | 0.667 |
+A zero error does not mean every second was right: errors can cancel (see the confusion matrix above). Time in bed was predicted at 114 s and out of bed at 76 s. `timeline.txt` rounds segment boundaries to whole seconds, so its per-state totals differ from `summary.json` by up to 3 s (for example sitting on bed 62 s versus 65 s). [CONFIRM: fix or note this]
+
+### 8.3 Bed events
+
+Predicted events are matched one-to-one with ground-truth events. Two matching rules are reported, because the system's "start time" and the ground-truth "start time" are defined slightly differently:
+
+- **Start-time rule:** predicted start within ±3 s of the ground-truth start (the rule in `eval_results.json`).
+- **Interval-overlap rule:** the predicted [start, confirmed] interval overlaps the ground-truth interval (touching counts).
+
+| Event | GT | Predicted | Rule | TP | FP | FN | Precision | Recall | F1 |
+|---|---|---|---|---|---|---|---|---|---|
+| bed_exit | 5 | 4 | Start ±3 s | 2 | 2 | 3 | 0.50 | 0.40 | 0.444 |
+| bed_exit | 5 | 4 | Interval overlap | 2 | 2 | 3 | 0.50 | 0.40 | 0.444 |
+| bed_return | 3 | 3 | Start ±3 s | 0 | 3 | 3 | 0.00 | 0.00 | 0.000 |
+| bed_return | 3 | 3 | Interval overlap | 2 | 1 | 1 | 0.67 | 0.67 | 0.667 |
+| floor_lying | 1 | 1 | either | 1 | 0 | 0 | 1.00 | 1.00 | 1.000 |
+
+Event by event:
+
+| Ground truth | Predicted | Outcome |
+|---|---|---|
+| Exit, 41-44 s | Event start 45 s, confirmed 60 s | Late by 1 s at the start, but confirmed 16 s late. Not matched by either rule |
+| Exit, 93-95 s | Event start 97 s, confirmed 100 s | Not matched. The patient is already out of frame at 97 s, and a caregiver is at the door (F4) |
+| Exit, 123-125 s | none | Missed (F1) |
+| Exit, 142-144 s | Event 144-145 s | Matched |
+| Exit, 157-159 s | Event 157-163 s, confidence 0.58, MONITOR | Matched |
+| Return, 72-77 s | Event 68-79 s | Matched by interval overlap, 4 s early by start |
+| Return, 105-117 s | Event 109-119 s | Matched by interval overlap, 4 s late by start |
+| Return, 132-139 s | none | Missed (F3) |
+| none (hard cut at 170 s) | Return 171-174 s | False positive (F5) |
+| Floor lying, 184 s | Event 185-187 s, ALERT | Matched, one second late |
+
+Two of the three "false positive" exits and two of the three "false positive" returns under the start-time rule are late or early detections of real events. The interval-overlap rule was adopted after seeing these results, so the stricter start-time numbers are shown as well.
+
+### 8.4 Alerts and the agent
+
+- `floor_lying` was the only ALERT (1 of 1). Two exits were MONITOR (confidence 0.67 and 0.58), and the rest were NORMAL.
+- The verifier produced 7 traces (2 segment checks, 4 exit checks, 1 floor check). All 7 verdicts were "confirm". It never rejected or downgraded a result in this run, and the three returns were not verified. It supplied explanations but did not change any outcome here.
 
 ---
 
-## 9. Failure Case Analysis
+## 9. Failure Cases
 
-Detailed in [`outputs/failure_cases.md`](file:///g:/Bedwatch/outputs/failure_cases.md):
+Observed in this run. Each entry gives the time, predicted versus true state, the evidence, the likely cause, and what would fix it. "Likely" marks hypotheses not yet tested.
 
-1. **Clothing & Appearance Switches (100s, 120s, 140s, 180s)**:
-   - *Challenge*: The stitched video features 4 distinct outfits. Visual ReID embeddings fail completely across cuts.
-   - *Mitigation*: The tracker prioritizes spatial continuity and bed-proximity priors rather than visual clothing features.
-2. **Camera Pan (144–145s)**:
-   - *Challenge*: During camera panning, 2D bed polygon coordinates are invalid.
-   - *Mitigation*: View schedule flags the `moving` state, masking bed-relative features and relying strictly on posture geometry.
-3. **Curtain Occlusion (146–148s)**:
-   - *Challenge*: Resident passes behind curtains, occluding torso and limbs.
-   - *Mitigation*: Abstention via `UNKNOWN`. Agent confirms the resident was walking immediately before and after, preventing spurious bed-exit alarms.
-4. **Dim Lighting Step (130.5–140s)**:
-   - *Challenge*: Abrupt lighting drop at ~130.5s degrades keypoint confidence.
-   - *Mitigation*: Automatic CLAHE contrast enhancement on low-luminance frames preserves keypoint extraction.
-5. **Lying Along the Base of the Bed (184–190s)**:
-   - *Challenge*: Patient falls onto the carpet alongside the bed frame. Loose bounding boxes would classify this as in-bed.
-   - *Mitigation*: Mattress polygon strictly outlines top surface. All body keypoints at base of bed register outside $\implies$ successfully triggers **`ALERT`**.
+### F1. Walking is read as standing (23 of 40 s)
+
+- **Where:** the walk away from the bed at 43-48 s (the first exit), and the walk at 124-127 s (the exit at 123-125 s).
+- **Predicted vs true:** `timeline.txt` shows STANDING from 45 s to 57 s, where the ground truth is WALKING, STANDING, WALKING.
+- **Impact:** an exit needs movement away from the bed. The first exit is confirmed at 60 s instead of 44 s, and the exit at 123-125 s is never confirmed.
+- **Likely cause:** the walking threshold (0.18 body heights per second) is too high for the apparent motion in this wide-angle, high-mounted view, sampled at 5 fps.
+- **Fix to try:** log `speed_bh_s` on ground-truth walking frames and set the threshold from that distribution, then check on held-out footage.
+
+### F2. Standing beside the bed is read as sitting on the bed (11 of 28 s)
+
+- **Predicted vs true:** STANDING predicted as SITTING_ON_BED for 11 s.
+- **Likely cause:** the mattress polygon is drawn in image space. A person standing on the floor between the bed and the camera has hips and torso that project into the polygon.
+- **Fix to try:** keep the mattress-top polygon for lying and sitting, add the bed's floor footprint, and use the ankle positions to decide "on the bed or beside it".
+
+### F3. The dim-light return at 132-139 s is missed
+
+- **Predicted vs true:** `timeline.txt` shows SITTING_ON_BED from 136 s to 144 s. The ground truth is sitting at 136-139 s, lying at 139-141 s, then sitting again.
+- **Likely cause:** the generated clip has only about 2 s of lying, the same length as the 2.0 s lying confirmation, and the frames are dim.
+- **Fix to try:** test a shorter lying confirmation (1.0 s) and check pose confidence in the dim frames.
+
+### F4. A caregiver at the door is treated as the patient (about 97-103 s)
+
+- **Evidence:** 4 s of ground-truth OUT_OF_BED are predicted as WALKING, and a BED_EXIT event starts at 97 s. The patient left the frame at about 95 s, and the caregiver enters at the door at 97 s. [CONFIRM on the final `annotated.mp4` at 99 s and 101 s; in the earlier run the skeleton was on the caregiver]
+- **Likely cause:** the tracker adopts any person who appears near the door right after the patient leaves.
+- **Fix to try:** treat frames with a second person near the door as ambiguous, and send them to the agent instead of adopting the new track.
+
+### F5. A hard cut creates a false return (171-174 s)
+
+- **Predicted vs true:** a RETURN_TO_BED event (confidence 0.97) right after the scene cut at about 170 s, where the patient stands, sits and lies within 2 s with no approach.
+- **Likely cause:** event chains are not closed at scene cuts, and the ground-truth ignore window (170-172 s) is not applied by the evaluator.
+- **Fix to try:** reset chain state at a detected cut and apply the ignore window.
+
+### What worked
+
+- Curtain occlusion: UNKNOWN at 145-148 s against a ground truth of 146-148 s.
+- Floor lying: LYING_ON_FLOOR for 5 of 6 s, event at 185 s, decision ALERT.
+- Lying in bed (96%), sitting on the bed (93%) and sitting outside the bed (100%).
+
+### Not verified in this run
+
+- Tracker identity across the four outfit changes: track IDs were not logged, so no claim is made in either direction.
+- Camera pan (144-145 s): no spurious event appears in `events.json`, but the exit at 144-145 s falls inside the pan.
+- CLAHE in dim light: not compared with and without.
+
+### Evidence frames to attach
+
+```bash
+for t in 45 99 101 140 172 185; do
+  ffmpeg -y -ss $t -i outputs/annotated.mp4 -frames:v 1 outputs/frames/fail_$t.jpg
+done
+```
 
 ---
 
