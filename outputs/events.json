@@ -1,0 +1,72 @@
+[
+  {
+    "event": "bed_return",
+    "start_time": "00:01:08",
+    "confirmed_time": "00:01:19",
+    "previous_state": "standing",
+    "current_state": "lying_in_bed",
+    "confidence": 0.89,
+    "decision": "NORMAL",
+    "trace_id": "ev-0004"
+  },
+  {
+    "event": "bed_exit",
+    "start_time": "00:01:37",
+    "confirmed_time": "00:01:40",
+    "previous_state": "sitting_on_bed",
+    "current_state": "walking",
+    "confidence": 0.67,
+    "decision": "MONITOR",
+    "trace_id": "ev-0001"
+  },
+  {
+    "event": "bed_return",
+    "start_time": "00:01:49",
+    "confirmed_time": "00:01:59",
+    "previous_state": "standing",
+    "current_state": "lying_in_bed",
+    "confidence": 0.97,
+    "decision": "NORMAL",
+    "trace_id": "ev-0005"
+  },
+  {
+    "event": "bed_exit",
+    "start_time": "00:02:24",
+    "confirmed_time": "00:02:26",
+    "previous_state": "sitting_on_bed",
+    "current_state": "walking",
+    "confidence": 0.82,
+    "decision": "NORMAL",
+    "trace_id": "ev-0002"
+  },
+  {
+    "event": "bed_exit",
+    "start_time": "00:02:38",
+    "confirmed_time": "00:02:43",
+    "previous_state": "standing",
+    "current_state": "walking",
+    "confidence": 0.62,
+    "decision": "MONITOR",
+    "trace_id": "ev-0003"
+  },
+  {
+    "event": "bed_return",
+    "start_time": "00:02:51",
+    "confirmed_time": "00:02:54",
+    "previous_state": "walking",
+    "current_state": "lying_in_bed",
+    "confidence": 0.97,
+    "decision": "NORMAL",
+    "trace_id": "ev-0006"
+  },
+  {
+    "event": "floor_lying",
+    "start_time": "00:03:05",
+    "confirmed_time": "00:03:07",
+    "previous_state": "standing",
+    "current_state": "lying_on_floor",
+    "confidence": 0.95,
+    "decision": "ALERT",
+    "trace_id": "ev-0007"
+  }
+]

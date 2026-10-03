@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bedwatch"
+version = "0.1.0"
+description = "Agentic vision system for activity tracking, bed exit/return detection, and contextual alerts"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+dependencies = [
+    "ultralytics>=8.3.0",
+    "opencv-python>=4.8.0",
+    "pyyaml>=6.0",
+    "pandas>=2.0.0",
+    "scipy>=1.10.0",
+    "scikit-learn>=1.2.0",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+bedwatch = "bedwatch.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

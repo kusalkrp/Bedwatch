@@ -217,4 +217,9 @@ marimo/_lsp/
 __marimo__/
 
 # Streamlit
-.streamlit/secrets.toml
+og.mp4
+/Doc
+*.pt
+outputs/*.mp4
+cache/*.mp4
+*.mp4

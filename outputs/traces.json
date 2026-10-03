@@ -1,0 +1,90 @@
+[
+  {
+    "trace_id": "tr-seg-026",
+    "trigger": "occlusion_unknown",
+    "steps": [
+      {
+        "tool": "get_previous_segment",
+        "observation": "Preceded by WALKING (1.4s)"
+      },
+      {
+        "tool": "get_next_segment",
+        "observation": "Followed by WALKING (1.8s)"
+      }
+    ],
+    "verdict": "confirm",
+    "confidence": 0.9
+  },
+  {
+    "trace_id": "tr-seg-037",
+    "trigger": "floor_lying_overlap_check",
+    "steps": [
+      {
+        "tool": "recheck_bed_overlap",
+        "observation": "Mattress overlap: 0.00, dist_bh: 0.27"
+      }
+    ],
+    "verdict": "confirm",
+    "confidence": 0.95
+  },
+  {
+    "trace_id": "ev-0001",
+    "trigger": "bed_exit_chain_verification",
+    "steps": [
+      {
+        "tool": "get_previous_segment",
+        "observation": "In-bed state before exit: SITTING_ON_BED"
+      },
+      {
+        "tool": "get_next_segment",
+        "observation": "Out-of-bed motion after exit: STANDING"
+      }
+    ],
+    "verdict": "confirm",
+    "confidence": 0.67
+  },
+  {
+    "trace_id": "ev-0002",
+    "trigger": "bed_exit_chain_verification",
+    "steps": [
+      {
+        "tool": "get_previous_segment",
+        "observation": "In-bed state before exit: SITTING_ON_BED"
+      },
+      {
+        "tool": "get_next_segment",
+        "observation": "Out-of-bed motion after exit: UNKNOWN"
+      }
+    ],
+    "verdict": "confirm",
+    "confidence": 0.82
+  },
+  {
+    "trace_id": "ev-0003",
+    "trigger": "bed_exit_chain_verification",
+    "steps": [
+      {
+        "tool": "get_previous_segment",
+        "observation": "In-bed state before exit: SITTING_ON_BED"
+      },
+      {
+        "tool": "get_next_segment",
+        "observation": "Out-of-bed motion after exit: SITTING_ON_BED"
+      }
+    ],
+    "verdict": "confirm",
+    "confidence": 0.62
+  },
+  {
+    "trace_id": "ev-0007",
+    "trigger": "floor_event_verification",
+    "steps": [
+      {
+        "tool": "recheck_bed_overlap",
+        "observation": "Mattress overlap: 0.21, dist: 0.19"
+      }
+    ],
+    "verdict": "confirm",
+    "confidence": 0.95
+  }
+]

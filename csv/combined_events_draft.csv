@@ -1,0 +1,20 @@
+event,start_s,confirmed_s,counts_as_event,note
+sit_up_in_bed,22,24,no,sitting up but not leaving
+brief_stand_and_sit_back,36,38,no,stands beside bed then sits back down
+bed_exit,41,44,yes,"stands, then walks away from bed"
+bed_return,72,77,yes,"approaches bed, sits at 74s, lies down at 77s"
+bed_exit,93,95,yes,"sits up, stands and leaves view"
+caregiver_present,97,102,no,"second person (grey top, light trousers) enters at door and leaves; not the patient"
+bed_return,105,117,yes,"part2: patient enters, walks to bed (105-112), stands (112), sits (113), lies down (117)"
+bed_exit,123,125,yes,"part3: sits (121), stands (123), walks away toward chair (124-125)"
+sit_on_chair,128,131,no,"sits on chair, not a bed event"
+bed_return,132,139,yes,"part3 in dim light: walks to bed (132-135), stands (135), sits (136), lies down (139)"
+bed_exit,142,144,yes,"part4: sits (141), stands (142), walks away toward the window (143-144); no return before the video ends"
+occluded_by_curtain,146,148,no,"patient mostly hidden behind curtain; state is UNKNOWN, not a bed event"
+false_return_attempt,150,157,no,"[16-18 A] walks to the bed, sits on the edge (154-157), never lies down: not a return"
+bed_exit,157,159,yes,"[16-18 A] stands from the bed edge and walks away; only about 3 s of bed time, so low confidence (expected: exit, low confidence)"
+aborted_exit,164,167,no,"[16-18 B] stands, one step, turns back and sits down: not an exit"
+caregiver_present,171,179,no,"[16-18 C] caregiver in dark clothes enters, stands beside the bed, leaves; patient stays lying"
+scene_cut_stand_sit_lie,170,172,ignore,"[16-18 C] hard cut at 170 s, then stand, sit, lie in 2 s with no approach: exclude from event scoring"
+caregiver_in_doorway,180,181,no,[19] person in dark clothes behind the open door
+floor_lying,184,186,yes,"[19] kneels and falls at about 184 s, then lies on the floor until 190 s; expected decision ALERT; not a bed exit"
