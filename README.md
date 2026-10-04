@@ -159,9 +159,18 @@ The system produces three discrete safety decisions:
 
 ### Prerequisites
 - Python 3.10+ (tested on Python 3.11 and 3.12)
+
+### Option A: Local Installation (Recommended)
+
+**Note for Windows Users**: A standard `pip install` may install a CPU-only version of PyTorch. To enable GPU acceleration, first install PyTorch with CUDA support according to the [official PyTorch instructions](https://pytorch.org/get-started/locally/), then run:
+
+```bash
 # Install package in editable mode
 pip install -e .
 ```
+
+*Note: The YOLO11-pose weights (`yolo11s-pose.pt`) will automatically download on the first run. The system has zero other external dependencies.*
+
 
 ### Running the CLI
 
@@ -176,8 +185,10 @@ python -m bedwatch.cli process --video path/to/patient_video.mp4
 python -m bedwatch.cli process --video path/to/patient_video.mp4 --no-render
 ```
 
+> **Note on `og.mp4`**: The benchmark video (`og.mp4`) used in the commands below is not included in the repository due to size and privacy constraints. Please use your own videos.
+
 **How Bedwatch handles new videos:**
-1. **Bed Geometry Auto-Discovery:** Bedwatch automatically looks for a camera-specific config (`configs/views_<video_stem>.yaml`). If one doesn't exist, it uses `configs/views.yaml` or interactively launches a 4-point bed polygon calibration on the first frame.
+1. **Bed Geometry:** Bedwatch looks for a camera-specific manual config (`configs/views_<video_stem>.yaml`). If one doesn't exist, it will fallback to automatic YOLO bed-detection (with mitigations like mattress trimming and multi-frame consensus), but **manual calibration is strongly recommended** for clinical safety.
 2. **Feature Caching:** Extracted pose and bounding box features are cached in `cache/<video_stem>_features.jsonl` so re-running analysis or tuning thresholds takes < 2 seconds.
 3. **Structured Outputs:** Results are saved directly into `outputs/<video_stem>/` (`timeline.txt`, `summary.json`, `events.json`, `annotated.mp4`).
 
@@ -304,7 +315,7 @@ Aggregated durations per activity state, total in-bed vs. out-of-bed accounting,
 
 **Data and caveats.** One 190.07 s AI-generated video (`og.mp4`, one subject, four outfits, two camera views), labelled by hand at one-second resolution and reviewed against the video. All numbers below are **in-sample**: the heuristics, bed ROIs, and thresholds were developed and calibrated directly while inspecting this video. They show what the pipeline does on this footage and are not an estimate of performance on new footage. Events are scored on only 5 exits, 3 returns and 1 floor event, so each missed event moves a percentage by 20 to 33 points. Raw counts are shown next to percentages.
 
-All figures come from one run (`outputs/eval_results.json`, `outputs/summary.json`, `outputs/timeline.txt`, `outputs/events.json`): commit `81845d8`, configuration `configs/demo.yaml` (demo profile).
+All figures come from one run (`outputs/eval_results.json`, `outputs/summary.json`, `outputs/timeline.txt`, `outputs/events.json`): configuration `configs/demo.yaml` (demo profile).
 
 ### 8.1 State classification
 
@@ -402,6 +413,8 @@ To evaluate how automated bed detection performs relative to human calibration, 
 | **Floor State Duration Error** | 1 s (5 s pred vs 6 s GT) | **6 s (0 s pred vs 6 s GT)** | +5 s |
 | **Polygon IoU with `view_main`** | 1.000 | 0.366 (36.6%) | -63.4% |
 | **Polygon IoU with `view_panned`**| 1.000 | 0.054 (5.4%) | -94.6% |
+
+*Note: The automatic detection numbers shown above reflect the naive YOLO-segmentation baseline. The mitigations listed below were implemented to address these failures, but the full pipeline has not been re-measured on the benchmark dataset with the mitigations enabled.*
 
 #### Key Takeaways from the Comparison:
 1. **Side Panel / Skirt Overflow**: A generic YOLO bed mask segments the entire furniture item down to the floor legs/skirting. In `og.mp4`, the auto-polygon extends down to the floor where the patient lands during the 184–190 s fall. Because the patient's hips fall inside this extended polygon (4 of 31 fall frames), the decoder classifies the fall as lying in bed, falsely triggering a `bed_return` (NORMAL) instead of an emergency `floor_lying` (ALERT).
@@ -509,9 +522,9 @@ To ensure this system is robust for real-world clinical evaluation, several key 
    - *The Decision:* We feed frame probabilities into a Viterbi pathfinding algorithm restricted by an "Allowed Transition Graph."
    - *Why:* Frame-by-frame analysis flickers wildly. Our graph enforces physical reality (e.g., a person cannot transition directly from `LYING_ON_FLOOR` to `LYING_IN_BED` without standing or sitting first), mathematically eliminating impossible state flickering.
 
-3. **Manual Bed Calibration vs. Auto-Segmentation**
-   - *The Decision:* We require manual 4-point calibration of the mattress top rather than relying on automatic AI bed detection.
-   - *Why:* AI segmentation masks (like YOLO-Seg) are generic and include bed skirts and legs down to the floor. If a patient falls next to the bed, their hips land inside that extended mask, tricking the system into a false `NORMAL` state. A manual polygon explicitly isolates the top surface, guaranteeing floor falls trigger an `ALERT`.
+3. **Fallback Auto-Segmentation with Mitigations**
+   - *The Decision:* We built an automatic YOLO-based bed detector as a fallback, but we implemented strict mitigations (multi-frame consensus, bottom-trimming, and camera-motion guards) and still strongly prefer manual 4-point calibration.
+   - *Why:* Naive AI segmentation masks (like YOLO-Seg) are generic and include bed skirts and legs down to the floor. If a patient falls next to the bed, their hips land inside that extended mask, tricking the system into a false `NORMAL` state. The mitigations reduce this risk, but manual calibration is the only way to explicitly isolate the top surface and guarantee floor falls trigger an `ALERT`.
 
 4. **First-Class `UNKNOWN` Abstention State**
    - *The Decision:* We explicitly added an `UNKNOWN` state instead of forcing the model to guess the most likely pose when evidence is poor.
@@ -524,4 +537,4 @@ To ensure this system is robust for real-world clinical evaluation, several key 
 ---
 
 ## License
-Apache-2.0
+AGPL-3.0 (due to Ultralytics YOLO11 dependency)
