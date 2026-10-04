@@ -1,0 +1,22 @@
+[
+  {
+    "event": "bed_exit",
+    "start_time": "00:00:10",
+    "confirmed_time": "00:00:12",
+    "previous_state": "sitting_on_bed",
+    "current_state": "standing",
+    "confidence": 0.74,
+    "decision": "MONITOR",
+    "trace_id": "ev-0001"
+  },
+  {
+    "event": "bed_return",
+    "start_time": "00:00:10",
+    "confirmed_time": "00:00:29",
+    "previous_state": "standing",
+    "current_state": "lying_in_bed",
+    "confidence": 0.97,
+    "decision": "NORMAL",
+    "trace_id": "ev-0002"
+  }
+]

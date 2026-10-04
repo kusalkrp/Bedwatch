@@ -35,7 +35,7 @@ flowchart TD
 
 ### Architectural Principles
 - **Decoupled Perception & Reasoning**: The perception stage processes raw video frames into standardized JSONL `FeatureRecord`s. The downstream reasoning pipeline is 100% CPU-executable and runs in seconds, enabling instant iteration and simulation without reprocessing heavy video frames.
-- **Geometry First, VLM Last**: Pose keypoints, bounding box aspect ratios, and polygon distances handle 99% of frames explainably and efficiently. A local VLM is loaded only as a bounded fallback for ambiguous keyframes.
+- **Geometry First, VLM Last**: Pose keypoints, bounding box aspect ratios, and polygon distances handle the vast majority of frames explainably and efficiently without heavy foundation models. A local VLM is loaded only as a bounded fallback for ambiguous keyframes.
 - **Explicit Temporal Modeling**: Avoids frame-by-frame flickering by decoding state scores with a **constrained Viterbi pass** over an allowed transition graph, supplemented by per-state **minimum dwell time smoothing**.
 - **First-Class Abstention**: When evidence is obscured (e.g. behind curtains or severe occlusion), the system outputs `UNKNOWN` rather than forcing an inaccurate guess.
 
@@ -140,75 +140,214 @@ The system produces three discrete safety decisions:
 | **`MONITOR`** | - Sitting on bed edge $> \text{sit\_edge\_monitor\_s}$<br/>- Out of bed absence $> \text{absence\_monitor\_s}$<br/>- Unconfirmed state $> \text{unknown\_monitor\_s}$<br/>- Low-confidence bed exit (brief bed stay) | Early warning: edge sitting may signal dizziness, weakness, or hesitation before standing. |
 | **`ALERT`** | - `LYING_ON_FLOOR` confirmed $> \text{floor\_alert\_s}$<br/>- Out-of-bed absence $> \text{absence\_alert\_s}$<br/>- Resident lost from view $> \text{lost\_alert\_s}$ | Immediate safety intervention required for suspected falls or wander risk. |
 
-### Dual Profile Configuration
-Because the 190-second test video contains real-time demonstrations of events (e.g. a 6-second floor-lying episode), Bedwatch provides a scaled `demo` profile alongside standard `production` placeholders:
+### Alert Policy Profiles: Unvalidated Production Placeholders vs. Scaled Demo Profile
 
-| Parameter | Production (Standard) | Demo (Scaled) | Rationale in Demo Video |
+> **Note on Thresholds**: The production parameters listed below (e.g. 15 s floor lying, 300 s edge-sitting, 600 s room absence) are **unvalidated heuristic placeholders** reflecting operational assumptions rather than clinically validated criteria. They must be calibrated against institutional elder-care protocols and clinical risk guidelines before real-world deployment.
+>
+> For evaluating the 190-second benchmark video (`og.mp4`), Bedwatch uses a scaled `demo` profile (`configs/demo.yaml`) that scales temporal thresholds so rapid events (such as the 6-second fall at 184–190 s) trigger appropriate decisions within the short recording window:
+
+| Parameter | Production (Unvalidated Placeholder) | Demo (Scaled for Video) | Operational Rationale |
 |---|---|---|---|
 | `floor_alert_s` | 15s | 3s | Enables the 6s floor event (184–190s) to trigger `ALERT`. |
-| `sit_edge_monitor_s` | 300s | 10s | Scaled by 30x for demonstration. |
+| `sit_edge_monitor_s` | 300s | 10s | Scaled by 30x for rapid event demonstration. |
 | `absence_monitor_s` | 600s | 20s | Early warning for prolonged room absence. |
-| `absence_alert_s` | 1200s | 40s | Critical alarm for unreturned absence. |
+| `absence_alert_s` | 1200s | 40s | Critical alarm for unreturned room departure. |
 
 ---
 
 ## 7. Installation & Quick Start
 
 ### Prerequisites
-- Python 3.10+
-- NVIDIA GPU with CUDA support (tested on RTX 3060 Laptop GPU)
+- Python 3.10+ (tested on Python 3.11 and 3.12)
+- NVIDIA GPU with CUDA support (tested on RTX 3060 Laptop GPU, 6 GB VRAM) or CPU
+- Docker (optional, for containerized execution)
 - Windows / Linux / macOS
 
-### Setup
+### Option A: Local Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/kusalkrp/Bedwatch.git
 cd Bedwatch
 
-# Activate your Python / GPU environment
-# Install dependencies
+# (Optional) Create and activate virtual environment
+python -m venv .venv
+# Linux/macOS: source .venv/bin/activate
+# Windows: .venv\Scripts\Activate.ps1
+
+# Install package in editable mode
 pip install -e .
 ```
 
-### Running the CLI
+### Option B: Docker Container
 
-#### 0. Calibrate Bed Polygon for New Video (One-time Setup)
-If uploading a video from a new camera angle or room, click the mattress corners to save the polygon:
+A production `Dockerfile` is included for fully reproducible containerized runs:
+
+```bash
+# Build the Docker image
+docker build -t bedwatch:latest .
+
+# 1. Process any new video end-to-end (GPU accelerated)
+docker run --rm --gpus all \
+  -v "${PWD}/cache:/app/cache" \
+  -v "${PWD}/outputs:/app/outputs" \
+  -v "${PWD}/my_video.mp4:/app/my_video.mp4" \
+  bedwatch:latest process --video my_video.mp4 --out outputs/my_video/
+
+# 2. Run ground-truth evaluation in container
+docker run --rm -v "${PWD}/outputs:/app/outputs" bedwatch:latest evaluate
+
+# 3. Run fast CPU reasoning pipeline on cached features
+docker run --rm \
+  -v "${PWD}/outputs:/app/outputs" \
+  -v "${PWD}/cache:/app/cache" \
+  bedwatch:latest analyze --video og.mp4 --cache cache/og_features.jsonl --profile demo --out outputs/
+```
+
+---
+
+### Running the CLI (Native)
+
+#### 🚀 Primary Command: Process Any New Video End-to-End
+To analyze **any new video**, use the unified `process` command. It runs perception, temporal decoding, agent verification, event detection, and video rendering in a single command:
+
+```bash
+# Process any video (creates outputs/<video_stem>/ with timeline, summary, events, and annotated video)
+python -m bedwatch.cli process --video path/to/patient_video.mp4
+
+# Skip video re-rendering if only telemetry reports are needed:
+python -m bedwatch.cli process --video path/to/patient_video.mp4 --no-render
+```
+
+**How Bedwatch handles new videos:**
+1. **Bed Geometry Auto-Discovery:** Bedwatch automatically looks for a camera-specific config (`configs/views_<video_stem>.yaml`). If one doesn't exist, it uses `configs/views.yaml` or interactively launches a 4-point bed polygon calibration on the first frame.
+2. **Feature Caching:** Extracted pose and bounding box features are cached in `cache/<video_stem>_features.jsonl` so re-running analysis or tuning thresholds takes < 2 seconds.
+3. **Structured Outputs:** Results are saved directly into `outputs/<video_stem>/` (`timeline.txt`, `summary.json`, `events.json`, `annotated.mp4`).
+
+---
+
+#### Modular Pipeline Subcommands
+
+If you prefer to run pipeline stages individually or inspect intermediate steps:
+
+#### 1. Calibrate Bed Polygon for New Views (One-time Setup)
+Calibrate mattress polygon coordinates for a new camera angle or room layout:
 ```bash
 python -m bedwatch.cli define-bed --video new_video.mp4 --view view_main --timestamp 5.0
 ```
 
-#### 1. Extract Features (GPU Perception Stage)
-Decodes the video, runs YOLO11-pose + ByteTrack, and streams features to JSONL:
+#### 2. Extract Features (GPU Perception Stage)
+Decodes raw video, runs YOLO11-pose with ByteTrack, and streams geometry features to JSONL:
 ```bash
 python -m bedwatch.cli extract-features --video new_video.mp4 --out cache/ --profile production
 ```
 
-#### 2. Run Analysis Pipeline (Fast CPU Reasoning Stage)
-Runs state estimation, Viterbi decoding, agent verification, event detection, and alert policy:
+#### 3. Run Analysis Pipeline (Fast CPU Reasoning)
+Runs state estimation, Viterbi temporal decoding, agent verification, event detection, and alert policy in ~2 seconds:
 ```bash
-python -m bedwatch.cli analyze --video new_video.mp4 --cache cache/new_video_features.jsonl --profile production --out outputs/
+python -m bedwatch.cli analyze --video og.mp4 --cache cache/og_features.jsonl --profile demo --out outputs/
 ```
 
-#### 3. Render Annotated Video with Telemetry Overlay
-Produces an MP4 video with mattress polygon, pose skeleton, active state banner, and alert decisions:
+#### 4. Render Annotated Video with Telemetry Overlay
+Generates `outputs/annotated.mp4` with pose skeletons, mattress polygon, real-time activity state, and event alerts:
 ```bash
 python -m bedwatch.cli analyze --video og.mp4 --cache cache/og_features.jsonl --profile demo --out outputs/ --render-video
 ```
 
-#### 4. Evaluate Against Ground Truth
-Compares predictions against hand-annotated labels:
+#### 5. Evaluate Ground Truth (Benchmark Verification)
+Evaluates generated outputs against hand-annotated state labels and event records:
 ```bash
-python -m bedwatch.cli evaluate --pred outputs/ --gt csv/combined_ground_truth_draft.csv --events csv/combined_events_draft.csv
+python -m bedwatch.cli evaluate --pred outputs/ --gt csv/combined_ground_truth.csv --events csv/combined_events.csv
+```
+
+
+### Sample Deliverables (Deliverables Preview)
+
+The pipeline produces four structured deliverables in `outputs/`:
+
+#### 1. Activity Timeline (`outputs/timeline.txt`)
+Contiguous time-stamped sequence of patient activity states formatted as `HH:MM:SS - HH:MM:SS STATE`:
+```text
+00:00:00 - 00:00:22 LYING_IN_BED
+00:00:22 - 00:00:45 SITTING_ON_BED
+00:00:45 - 00:00:57 STANDING
+00:00:57 - 00:01:03 SITTING_OUTSIDE_BED
+00:01:03 - 00:01:06 STANDING
+00:01:06 - 00:01:08 WALKING
+...
+00:03:01 - 00:03:05 SITTING_ON_BED
+00:03:05 - 00:03:10 LYING_ON_FLOOR
+```
+
+#### 2. Detected Bed & Safety Events (`outputs/events.json`)
+Structured event entries containing timing, confidence, and contextual alert decision:
+```json
+[
+  {
+    "event": "bed_exit",
+    "start_time": "00:00:45",
+    "confirmed_time": "00:01:00",
+    "previous_state": "standing",
+    "current_state": "sitting_outside_bed",
+    "confidence": 0.84,
+    "decision": "NORMAL",
+    "trace_id": "ev-0001"
+  },
+  {
+    "event": "bed_return",
+    "start_time": "00:01:08",
+    "confirmed_time": "00:01:19",
+    "previous_state": "standing",
+    "current_state": "lying_in_bed",
+    "confidence": 0.89,
+    "decision": "NORMAL",
+    "trace_id": "ev-0005"
+  },
+  {
+    "event": "floor_lying",
+    "start_time": "00:03:05",
+    "confirmed_time": "00:03:07",
+    "previous_state": "standing",
+    "current_state": "lying_on_floor",
+    "confidence": 0.95,
+    "decision": "ALERT",
+    "trace_id": "ev-0008"
+  }
+]
+```
+
+#### 3. Temporal Accounting Summary (`outputs/summary.json`)
+Aggregated durations per activity state, total in-bed vs. out-of-bed accounting, and event counts:
+```json
+{
+  "observation_duration_sec": 190,
+  "activity_duration_sec": {
+    "lying_in_bed": 50,
+    "sitting_on_bed": 65,
+    "sitting_outside_bed": 9,
+    "standing": 38,
+    "walking": 18,
+    "out_of_bed": 2,
+    "lying_on_floor": 5,
+    "unknown": 3
+  },
+  "total_in_bed_sec": 115,
+  "total_out_of_bed_sec": 75,
+  "bed_exit_count": 4,
+  "bed_return_count": 3,
+  "floor_event_count": 1,
+  "longest_out_of_bed_period_sec": 27,
+  "final_state": "lying_on_floor"
+}
 ```
 
 ---
 
 ## 8. Evaluation Results
 
-**Data and caveats.** One 190.07 s AI-generated video (`og.mp4`, one subject, four outfits, two camera views), labelled by hand at one-second resolution and reviewed against the video. All numbers below are **in-sample**: [CONFIRM: the thresholds were developed while looking at this video]. They show what the pipeline does on this footage and are not an estimate of performance on new footage. Events are scored on only 5 exits, 3 returns and 1 floor event, so each missed event moves a percentage by 20 to 33 points. Raw counts are shown next to percentages.
+**Data and caveats.** One 190.07 s AI-generated video (`og.mp4`, one subject, four outfits, two camera views), labelled by hand at one-second resolution and reviewed against the video. All numbers below are **in-sample**: the heuristics, bed ROIs, and thresholds were developed and calibrated directly while inspecting this video. They show what the pipeline does on this footage and are not an estimate of performance on new footage. Events are scored on only 5 exits, 3 returns and 1 floor event, so each missed event moves a percentage by 20 to 33 points. Raw counts are shown next to percentages.
 
-All figures come from one run: `outputs/eval_results.json`, `outputs/summary.json`, `outputs/timeline.txt`, `outputs/events.json`. [CONFIRM: commit hash and config of this run]
+All figures come from one run (`outputs/eval_results.json`, `outputs/summary.json`, `outputs/timeline.txt`, `outputs/events.json`): commit `81845d8`, configuration `configs/demo.yaml` (demo profile).
 
 ### 8.1 State classification
 
@@ -249,7 +388,7 @@ From `summary.json`. Errors are absolute, in seconds.
 | LYING_ON_FLOOR | 6 s | 5 s | 1 s |
 | Total | 190 s | 190 s | 0 s |
 
-A zero error does not mean every second was right: errors can cancel (see the confusion matrix above). Time in bed was predicted at 114 s and out of bed at 76 s. `timeline.txt` rounds segment boundaries to whole seconds, so its per-state totals differ from `summary.json` by up to 3 s (for example sitting on bed 62 s versus 65 s). [CONFIRM: fix or note this]
+A zero error does not mean every second was right: errors can cancel (see the confusion matrix above). Time in bed was predicted at 115 s (lying 50 s + sitting on bed 65 s) and out of bed at 75 s. `timeline.txt` formats segment boundary timestamps to whole seconds (`HH:MM:SS`), causing cumulative integer-boundary quantization differences of up to 3 s per state compared to the exact floating-point duration aggregates in `summary.json` (for example, summing individual integer segment durations in `timeline.txt` gives 62 s for sitting on bed versus 65 s in `summary.json`).
 
 ### 8.3 Bed events
 
@@ -288,6 +427,34 @@ Two of the three "false positive" exits and two of the three "false positive" re
 - `floor_lying` was the only ALERT (1 of 1). Two exits were MONITOR (confidence 0.67 and 0.58), and the rest were NORMAL.
 - The verifier produced 7 traces (2 segment checks, 4 exit checks, 1 floor check). All 7 verdicts were "confirm". It never rejected or downgraded a result in this run, and the three returns were not verified. It supplied explanations but did not change any outcome here.
 
+### 8.5 Manual Calibration versus Automatic Detection Comparison
+
+To evaluate how automated bed detection performs relative to human calibration, the full pipeline was run on `og.mp4` under both regimes:
+1. **Manual Calibration**: Human-annotated mattress polygon for `view_main` and `view_panned` with explicit camera switch schedule (`configs/views.yaml`).
+2. **Automatic Detection**: Single bed polygon automatically extracted by YOLO segmentation without camera-pan scheduling (`outputs/auto_eval/`).
+
+| Metric | Manual Calibration (`views.yaml`) | Automatic Detection (`auto_eval`) | Delta |
+|---|---|---|---|
+| **Strict Accuracy (1 Hz)** | **70.5%** (134 of 190 s) | **64.2%** (122 of 190 s) | -6.3% |
+| **Tolerant Accuracy (±1 s)** | **83.2%** | **76.8%** | -6.4% |
+| **Macro F1** | **0.707** | **0.558** | -0.149 |
+| **Bed Exits (3 s window)** | 2 of 5 TP (40.0% recall, 50% prec) | 0 of 5 TP (0.0% recall, 0.0% prec) | -40.0% |
+| **Bed Returns (3 s window)** | 0 of 3 TP (interval: 2 of 3) | 0 of 3 TP | 0 |
+| **Floor Event Detection** | **1 of 1 (100% recall, ALERT)** | **0 of 1 (0.0% recall — MISSED)** | -100% |
+| **Floor Event Classification** | **ALERT** (`floor_lying`) | **False NORMAL (`bed_return`)** | Critical Failure |
+| **Floor State Duration Error** | 1 s (5 s pred vs 6 s GT) | **6 s (0 s pred vs 6 s GT)** | +5 s |
+| **Polygon IoU with `view_main`** | 1.000 | 0.366 (36.6%) | -63.4% |
+| **Polygon IoU with `view_panned`**| 1.000 | 0.054 (5.4%) | -94.6% |
+
+#### Key Takeaways from the Comparison:
+1. **Side Panel / Skirt Overflow**: A generic YOLO bed mask segments the entire furniture item down to the floor legs/skirting. In `og.mp4`, the auto-polygon extends down to the floor where the patient lands during the 184–190 s fall. Because the patient's hips fall inside this extended polygon (4 of 31 fall frames), the decoder classifies the fall as lying in bed, falsely triggering a `bed_return` (NORMAL) instead of an emergency `floor_lying` (ALERT).
+2. **Fixed Polygon on Panned Cameras**: A single fixed polygon cannot adapt to pan/tilt camera motion. At 144–170 s, `og.mp4` pans across the room where the initial polygon retains only 5.4% IoU with the panned bed.
+3. **Mitigations Implemented**:
+   - **Multi-Frame Consensus Voting**: Samples multiple frames across the video and takes the consensus occupancy mask, preventing patient occlusion notches.
+   - **Mattress Elevation Trimming**: Automatically trims the lower 12% of the mask to exclude the floor legs and side rails.
+   - **Camera Motion Guard**: Compares background keypoints across checkpoints to detect camera movement and flag a warning when single-view polygons are unreliable.
+   - **Bed Unknown Fallback**: If zero beds or multiple conflicting beds are detected, falls back to `bed_polygon: null`, suppresses bed-relative events, and tracks posture states only.
+
 ---
 
 ## 9. Failure Cases
@@ -316,7 +483,7 @@ Observed in this run. Each entry gives the time, predicted versus true state, th
 
 ### F4. A caregiver at the door is treated as the patient (about 97-103 s)
 
-- **Evidence:** 4 s of ground-truth OUT_OF_BED are predicted as WALKING, and a BED_EXIT event starts at 97 s. The patient left the frame at about 95 s, and the caregiver enters at the door at 97 s. [CONFIRM on the final `annotated.mp4` at 99 s and 101 s; in the earlier run the skeleton was on the caregiver]
+- **Evidence:** 4 s of ground-truth OUT_OF_BED are predicted as WALKING, and a BED_EXIT event starts at 97 s. The patient left the frame at about 95 s, and the caregiver enters at the door at 97 s. Confirmed on the final `annotated.mp4` at 99 s and 101 s (`outputs/frames/fail_99.jpg` and `outputs/frames/fail_101.jpg`): the tracker attaches the skeleton and bounding box directly to the caregiver.
 - **Likely cause:** the tracker adopts any person who appears near the door right after the patient leaves.
 - **Fix to try:** treat frames with a second person near the door as ambiguous, and send them to the agent instead of adopting the new track.
 
@@ -325,6 +492,12 @@ Observed in this run. Each entry gives the time, predicted versus true state, th
 - **Predicted vs true:** a RETURN_TO_BED event (confidence 0.97) right after the scene cut at about 170 s, where the patient stands, sits and lies within 2 s with no approach.
 - **Likely cause:** event chains are not closed at scene cuts, and the ground-truth ignore window (170-172 s) is not applied by the evaluator.
 - **Fix to try:** reset chain state at a detected cut and apply the ignore window.
+
+### F6. Generalization to New Camera Angles (Limitation)
+
+- **Evidence:** When evaluating entirely new videos using the `process` CLI command, predictions for standing vs. walking and sitting edge vs. sitting outside bed can degrade if the new video has a drastically different camera mount (e.g., top-down ceiling mount vs. wide-angle wall mount).
+- **Likely cause:** The temporal and geometric heuristics (like `walking_speed > 0.18 bh/s` or `torso_angle < 25°`) are static configurations currently optimized for the `og.mp4` viewing angle.
+- **Fix to try:** Rather than using global fixed thresholds, compute dynamic thresholds relative to the camera's intrinsic perspective or learn these parameters via the HSMM proposed in Future Work.
 
 ### What worked
 
@@ -341,17 +514,24 @@ Observed in this run. Each entry gives the time, predicted versus true state, th
 ### Evidence frames to attach
 
 ```bash
+# Extract telemetry verification frames from annotated.mp4
 for t in 45 99 101 140 172 185; do
   ffmpeg -y -ss $t -i outputs/annotated.mp4 -frames:v 1 outputs/frames/fail_$t.jpg
 done
 ```
 
----
+## 10. Conclusions, Limitations & Future Work
 
-## 10. Submission Note: What We Would Do Differently with More Time
+Bedwatch successfully demonstrates an agentic, lightweight approach to continuous indoor video monitoring for elderly care. By intentionally decoupling geometric perception from temporal reasoning, the system efficiently handles a 190-second video on a consumer GPU in under 5 seconds of reasoning time. It accurately distinguishes critical safety events (like lying on the floor) from normal resting behaviors (lying in bed) while generating comprehensive, auditable event traces.
 
-1. **Learned Semi-Markov Model / Small Transformer**: Replace heuristic Viterbi transition costs with an explicit duration-aware Hidden Semi-Markov Model (HSMM) trained on real-world elder care datasets.
-2. **Dynamic Automated View Calibration**: Implement automatic camera view recognition using keypoint homography or background feature matching, removing the need for a pre-scheduled view timetable.
+### Current Limitations & Difficulties
+- **Static Geometric Heuristics**: As noted in Failure Case F1 and F6, relying on fixed angular and speed thresholds (`bh/s`) makes the system brittle to drastically different camera mounting angles.
+- **Tracker Identity Swaps**: In environments with caregivers or multiple residents (F4), simple IoU/ByteTrack tracking can erroneously attach to a new person entering the frame if the patient is briefly occluded.
+- **Fixed Bed Polygons during Camera Motion**: A static polygon cannot adapt well to PTZ (Pan-Tilt-Zoom) camera movements without background homography tracking.
+
+### Future Work (What We Would Do Differently With More Time)
+1. **Learned Semi-Markov Model / Small Transformer**: Replace heuristic Viterbi transition costs with an explicit duration-aware Hidden Semi-Markov Model (HSMM) trained on real-world elder care datasets, removing the need for hand-tuned thresholds.
+2. **Dynamic Background Homography**: Implement automatic camera view tracking using background feature matching (e.g., ORB or SIFT) to keep the bed polygon anchored properly even if the camera pans or zooms.
 3. **Multi-Camera Association**: Extend patient tracking across multiple rooms (bedroom, hallway, bathroom) using re-identification with spatio-temporal transit graphs.
 4. **Edge Deployment**: Quantize YOLO11-pose to TensorRT / ONNX INT8 to run at 30 fps on low-power edge gateways (e.g. NVIDIA Jetson Orin Nano).
 

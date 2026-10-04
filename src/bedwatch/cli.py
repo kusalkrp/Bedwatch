@@ -363,6 +363,50 @@ def cmd_evaluate(args):
     console.print(f"\n[green]Saved evaluation results to {eval_out}[/green]")
 
 
+def cmd_process(args):
+    """End-to-end processing pipeline for a new video."""
+    import copy
+    video_path = Path(args.video)
+    video_stem = video_path.stem
+    
+    # 1. Check if view config exists, otherwise run define-bed
+    views_config = Path("configs") / f"views_{video_stem}.yaml"
+    if not views_config.exists():
+        console.print(Panel(f"[yellow]No bed configuration found for '{video_stem}'. Launching interactive setup.[/yellow]"))
+        define_args = copy.copy(args)
+        define_args.view = "view_main"
+        define_args.timestamp = 5.0
+        define_args.points = None
+        define_args.out = str(views_config)
+        cmd_define_bed(define_args)
+        
+    out_dir = Path("outputs") / video_stem
+    cache_dir = Path("cache")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / f"{video_stem}_features.jsonl"
+    
+    # 2. Extract features if cache doesn't exist
+    if not cache_path.exists():
+        console.print(Panel(f"[bold cyan]Running Perception Stage on {video_path.name}[/bold cyan]"))
+        extract_args = copy.copy(args)
+        extract_args.out = str(cache_dir)
+        extract_args.config = None
+        extract_args.views_config = str(views_config)
+        cmd_extract_features(extract_args)
+        
+    # 3. Run analysis
+    console.print(Panel(f"[bold cyan]Running Analysis Stage on {video_path.name}[/bold cyan]"))
+    analyze_args = copy.copy(args)
+    analyze_args.cache = str(cache_path)
+    analyze_args.out = str(out_dir)
+    analyze_args.config = None
+    analyze_args.views_config = str(views_config)
+    analyze_args.use_vlm = False
+    analyze_args.render_video = not args.no_render
+    analyze_args.max_render_frames = None
+    cmd_analyze(analyze_args)
+
+
 def main():
     parser = argparse.ArgumentParser(prog="bedwatch", description="Bedwatch Agentic Vision System")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -401,6 +445,12 @@ def main():
     p_eval.add_argument("--gt", default="csv/combined_ground_truth_draft.csv", help="Ground truth states CSV")
     p_eval.add_argument("--events", default="csv/combined_events_draft.csv", help="Ground truth events CSV")
 
+    # process
+    p_proc = subparsers.add_parser("process", help="End-to-end processing pipeline for a new video")
+    p_proc.add_argument("--video", required=True, help="Input video path")
+    p_proc.add_argument("--no-render", action="store_true", help="Skip rendering the annotated video")
+    p_proc.add_argument("--profile", default="demo", choices=["demo", "production"], help="Alert profile to use")
+
     args = parser.parse_args()
     if args.command == "define-bed":
         cmd_define_bed(args)
@@ -410,6 +460,8 @@ def main():
         cmd_analyze(args)
     elif args.command == "evaluate":
         cmd_evaluate(args)
+    elif args.command == "process":
+        cmd_process(args)
 
 
 if __name__ == "__main__":
