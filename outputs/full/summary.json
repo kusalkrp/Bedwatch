@@ -1,0 +1,35 @@
+{
+  "observation_duration_sec": 260,
+  "activity_duration_sec": {
+    "lying_in_bed": 70,
+    "sitting_on_bed": 98,
+    "sitting_outside_bed": 12,
+    "standing": 56,
+    "walking": 8,
+    "out_of_bed": 5,
+    "lying_on_floor": 7,
+    "unknown": 4
+  },
+  "activity_summary_formatted": {
+    "lying_in_bed": "1m 10s",
+    "sitting_on_bed": "1m 38s",
+    "sitting_outside_bed": "12s",
+    "standing": "56s",
+    "walking": "8s",
+    "out_of_bed": "5s",
+    "lying_on_floor": "7s",
+    "unknown": "4s"
+  },
+  "bed_exit_count": 2,
+  "bed_return_count": 4,
+  "floor_event_count": 1,
+  "total_in_bed_sec": 168,
+  "total_out_of_bed_sec": 93,
+  "bed_summary_formatted": {
+    "time_in_bed": "2m 48s",
+    "time_out_of_bed": "1m 33s",
+    "bed_exit_count": 2
+  },
+  "longest_out_of_bed_period_sec": 38,
+  "final_state": "lying_on_floor"
+}

@@ -1,0 +1,54 @@
+start_s,end_s,state,note
+0,22,LYING_IN_BED,"turning in bed; 12-13s torso raised (possible brief sit-up, REVIEW); 21s propped on elbow"
+22,36,SITTING_ON_BED,22s pushes up; 23-24s swings legs to edge; 24-35s sits on bed edge
+36,38,STANDING,brief stand beside bed (NOT a bed exit)
+38,41,SITTING_ON_BED,sits back down on edge
+41,43,STANDING,stands up beside bed
+43,48,WALKING,walks away from bed (bed exit begins)
+48,51,STANDING,"stands near window/chair, REVIEW"
+51,56,WALKING,walks around near chair
+56,57,STANDING,"at chair, about to sit"
+57,63,SITTING_OUTSIDE_BED,sits on chair
+63,64,STANDING,rises from chair
+64,69,WALKING,walks toward bed/door side
+69,74,STANDING,"stands beside bed, back to camera, REVIEW 72s (stepping?)"
+74,77,SITTING_ON_BED,"sits on bed edge, then lowers legs up"
+77,92,LYING_IN_BED,lies down; 84-91s under blanket; 83s moving
+92,94,SITTING_ON_BED,"sits up, then at bed edge; REVIEW 93-94s for a short STANDING"
+94,95,WALKING,walks toward camera and leaves frame
+95,105,OUT_OF_BED,patient not visible; caregiver enters ~97s and leaves ~102s (part2 0-2s); DECIDE OUT_OF_BED vs UNKNOWN convention
+105,112,WALKING,part2 5-12s: patient enters at door in different clothes (grey-blue pajamas) and walks to bed
+112,113,STANDING,part2 12s: stands at bed edge
+113,117,SITTING_ON_BED,"part2 13-16s: sits on bed edge, then swings legs up (16s semi-reclined, REVIEW)"
+117,121,LYING_IN_BED,part2 17-20s lies down; part3 0-1s still lying (continues across the 120s seam)
+121,123,SITTING_ON_BED,part3 1-2s: sits up and sits on bed edge (clothes changed again: blue top and jeans)
+123,124,STANDING,part3 3s: stands beside bed (bed exit begins)
+124,127,WALKING,part3 4-6s: walks away from bed toward chair
+127,128,STANDING,"part3 7s: at chair, about to sit, REVIEW"
+128,131,SITTING_OUTSIDE_BED,part3 8-10s: sits on chair; lighting drops abruptly at 130s (part3 10s)
+131,132,STANDING,"part3 11s: rising from chair in dim light, REVIEW"
+132,135,WALKING,part3 12-14s: walks back toward bed in dim light
+135,136,STANDING,part3 15s: stands at bed edge in dim light
+136,139,SITTING_ON_BED,part3 16-18s: sits on bed edge in dim light
+139,141,LYING_IN_BED,part3 19s lies down in dim light; part4 0-1s still lying (continues across the 140s seam)
+141,142,SITTING_ON_BED,part4 1s: sits up and swings legs over the bed edge (dim light)
+142,143,STANDING,part4 2s: stands beside bed (bed exit begins)
+143,145,WALKING,part4 3-4s: walks away from bed toward the window; CAMERA STARTS PANNING at 144s
+145,146,STANDING,"part4 5s: at the curtain, lifting it, still fully visible"
+146,148,UNKNOWN,"part4 6-7s: mostly hidden behind the curtain, only a sliver of head/arm visible"
+148,153,WALKING,"part4 8-9s: steps out from the curtain and walks, REVIEW 148s (may be STANDING) | [16-18] walks toward the bed from the chair side (dim light, camera view B: window centered, bed on the left)"
+153,154,STANDING,"[16-18] bends and lowers onto the bed edge, REVIEW exact sit moment"
+154,157,SITTING_ON_BED,[16-18] sits on the bed edge (about 3 s)
+157,158,STANDING,[16-18] stands up from the bed edge
+158,161,WALKING,"[16-18] walks away from the bed toward the window; never lies down | [16-18] clip B starts from the last frame of clip A; REVIEW 10s: at the window, may be STANDING for about 0.5 s, then walks back"
+161,164,SITTING_ON_BED,"[16-18] walks back and sits on the bed edge again (second visit, still no lying down)"
+164,165,STANDING,"[16-18] rises from the bed edge, REVIEW"
+165,166,WALKING,"[16-18] one step away from the bed, REVIEW"
+166,167,STANDING,[16-18] turns back toward the bed
+167,170,SITTING_ON_BED,[16-18] sits back down on the bed edge and stays seated; hard cut to a different scene at exactly 20.0s
+170,171,STANDING,"[16-18] cut at 20.0s: bright light, original camera view, patient in grey-blue pajamas stands at the bed (about 0.3 s), then sits; REVIEW"
+171,172,SITTING_ON_BED,[16-18] reclining back onto the bed; caregiver (dark clothes) appears at the door
+172,181,LYING_IN_BED,"[16-18] patient lies still; caregiver walks in (22-23s), stands beside the bed (24-27s), turns away (28s), leaves through the door (29s) | [19] reclined on the pillow; REVIEW: torso partly raised, may be SITTING_ON_BED. Another person in dark clothes stands behind the open door (0-1s), not the patient"
+181,182,SITTING_ON_BED,"[19] sits up on the bed edge (grey long-sleeve top and jeans, a fourth outfit)"
+182,184,STANDING,"[19] stands beside the bed, does not walk away"
+184,190,LYING_ON_FLOOR,"[19] 4s kneeling and falling with a hand on the floor (REVIEW: floor contact may start at 3.5s or 5s); 5-9s lies on the floor along the base of the bed, outside the mattress; ends lying still"

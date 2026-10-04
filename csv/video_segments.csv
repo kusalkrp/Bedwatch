@@ -1,0 +1,10 @@
+start_s,end_s,source,camera_view,lighting,note
+0,100,original,view_main,bright,
+100,120,11-12.mp4,view_main,bright,
+120,130,13-14.mp4,view_main,bright,
+130,140,13-14.mp4,view_main,dim,abrupt lighting step at about 130.5 s (detected cut)
+140,144,15.mp4,view_main,dim,
+144,145,15.mp4,moving,dim,camera pans: bed polygon invalid
+145,170,"15.mp4 and 16-18.mp4 (A, B)",view_panned,dim,"window centred, bed at the left; needs its own bed polygon"
+170,180,16-18.mp4 (C),view_main,bright,hard cut at about 170.07 s (view and lighting change)
+180,190,19.mp4,view_main,bright,floor-lying clip

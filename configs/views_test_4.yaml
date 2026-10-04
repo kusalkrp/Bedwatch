@@ -1,0 +1,18 @@
+schedule:
+- end_s: 999999.0
+  start_s: 0.0
+  view: view_main
+views:
+  view_main:
+    bed_polygon:
+    - - 144
+      - 426
+    - - 203
+      - 633
+    - - 867
+      - 377
+    - - 637
+      - 286
+    - - 147
+      - 423
+    description: Mattress polygon for view_main

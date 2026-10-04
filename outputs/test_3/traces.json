@@ -1,0 +1,18 @@
+[
+  {
+    "trace_id": "ev-0001",
+    "trigger": "bed_exit_chain_verification",
+    "steps": [
+      {
+        "tool": "get_previous_segment",
+        "observation": "In-bed state before exit: LYING_IN_BED"
+      },
+      {
+        "tool": "get_next_segment",
+        "observation": "Out-of-bed motion after exit: STANDING"
+      }
+    ],
+    "verdict": "confirm",
+    "confidence": 0.45
+  }
+]

@@ -1,0 +1,49 @@
+# Bedwatch Default Configuration (Production Profile)
+sampling_fps: 5.0
+views_config: "configs/views.yaml"
+
+perception:
+  pose_model: "yolo11s-pose.pt"
+  tracker_type: "bytetrack.yaml"
+  min_keypoint_conf: 0.3
+  brightness_threshold: 0.15
+  scene_cut_threshold: 0.35
+
+decoder:
+  min_dwell_s:
+    STANDING: 0.6
+    WALKING: 1.0
+    SITTING_ON_BED: 1.0
+    LYING_IN_BED: 2.0
+    SITTING_OUTSIDE_BED: 1.5
+    OUT_OF_BED: 2.0
+    LYING_ON_FLOOR: 1.5
+    UNKNOWN: 0.6
+  penalty:
+    self: 0.0
+    allowed: 1.0
+    disallowed: 20.0
+    unknown: 2.0
+
+events:
+  move_away_min_s: 2.5
+  move_away_min_bh: 0.5
+  approach_max_bh: 0.8
+  lying_confirm_s: 2.0
+  floor_confirm_s: 2.0
+  dwell_ref_s: 10.0
+
+agent:
+  enabled: true
+  max_steps: 3
+  vlm_calls_per_video: 20
+  keyframes_per_call: 3
+
+alerts:
+  profile: "production"
+  sit_edge_monitor_s: 300
+  unknown_monitor_s: 60
+  absence_monitor_s: 600
+  absence_alert_s: 1200
+  lost_alert_s: 1800
+  floor_alert_s: 15

@@ -1,0 +1,49 @@
+schedule:
+- end_s: 144.0
+  start_s: 0.0
+  view: view_main
+- end_s: 145.0
+  start_s: 144.0
+  view: moving
+- end_s: 170.0
+  start_s: 145.0
+  view: view_panned
+- end_s: 190.1
+  start_s: 170.0
+  view: view_main
+views:
+  moving:
+    bed_polygon: null
+    description: Camera pan interval where bed geometry is invalid
+  view_main:
+    bed_polygon:
+    - - 140
+      - 418
+    - - 632
+      - 263
+    - - 889
+      - 426
+    - - 186
+      - 695
+    - - 135
+      - 433
+    description: Mattress polygon for view_main
+  view_panned:
+    bed_polygon:
+    - - 50
+      - 560
+    - - 120
+      - 480
+    - - 230
+      - 450
+    - - 360
+      - 420
+    - - 530
+      - 420
+    - - 530
+      - 560
+    - - 380
+      - 680
+    - - 100
+      - 620
+    description: Panned view (bed on left, window and chair centered)
