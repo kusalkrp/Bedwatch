@@ -137,8 +137,8 @@ The system produces three discrete safety decisions:
 | Level | Condition | Clinical / Operational Rationale |
 |---|---|---|
 | **`NORMAL`** | Routine daily activities: lying, sitting, standing, walking, seated in chair, or brief bed departures. | Expected daily living patterns. |
-| **`MONITOR`** | - Sitting on bed edge $> \text{sit\_edge\_monitor\_s}$<br/>- Out of bed absence $> \text{absence\_monitor\_s}$<br/>- Unconfirmed state $> \text{unknown\_monitor\_s}$<br/>- Low-confidence bed exit (brief bed stay) | Early warning: edge sitting may signal dizziness, weakness, or hesitation before standing. |
-| **`ALERT`** | - `LYING_ON_FLOOR` confirmed $> \text{floor\_alert\_s}$<br/>- Out-of-bed absence $> \text{absence\_alert\_s}$<br/>- Resident lost from view $> \text{lost\_alert\_s}$ | Immediate safety intervention required for suspected falls or wander risk. |
+| **`MONITOR`** | - Sitting on bed edge > `sit_edge_monitor_s`<br/>- Out of bed absence > `absence_monitor_s`<br/>- Unconfirmed state > `unknown_monitor_s`<br/>- Low-confidence bed exit (brief bed stay) | Early warning: edge sitting may signal dizziness, weakness, or hesitation before standing. |
+| **`ALERT`** | - `LYING_ON_FLOOR` confirmed > `floor_alert_s`<br/>- Out-of-bed absence > `absence_alert_s`<br/>- Resident lost from view > `lost_alert_s` | Immediate safety intervention required for suspected falls or wander risk. |
 
 ### Alert Policy Profiles: Unvalidated Production Placeholders vs. Scaled Demo Profile
 
