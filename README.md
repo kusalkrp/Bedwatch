@@ -491,6 +491,9 @@ Bedwatch successfully demonstrates an agentic, lightweight approach to continuou
 2. **Dynamic Background Homography**: Implement automatic camera view tracking using background feature matching (e.g., ORB or SIFT) to keep the bed polygon anchored properly even if the camera pans or zooms.
 3. **Multi-Camera Association**: Extend patient tracking across multiple rooms (bedroom, hallway, bathroom) using re-identification with spatio-temporal transit graphs.
 4. **Edge Deployment**: Quantize YOLO11-pose to TensorRT / ONNX INT8 to run at 30 fps on low-power edge gateways (e.g. NVIDIA Jetson Orin Nano).
+5. **Night-Time Vision Robustness**: Revisit the lighting detection logic. While the current pipeline uses CLAHE for dim light, RGB-based YOLO degrades significantly in near-pitch-black environments. With more time, we would evaluate fine-tuned Infrared (IR) pose models or thermal imaging, which are standard in night-time clinical care.
+6. **Integration of Audio Modality**: Revisit the reliance on pure vision. Adding a lightweight audio event detector for sounds of distress, impacts (falls), or calls for help would dramatically increase recall for heavily occluded falls (e.g., if the patient falls behind the bed or in an unmonitored bathroom).
+7. **Clinical Expert Grounding**: The current temporal thresholds (e.g., 300s edge-sitting limit before MONITOR alert) are operational heuristics. We would want to revisit and validate these thresholds by collaborating directly with geriatric clinicians to establish evidence-based rules for what duration constitutes a "high risk" hesitation before a bed exit.
 
 ---
 
