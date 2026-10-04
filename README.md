@@ -497,5 +497,31 @@ Bedwatch successfully demonstrates an agentic, lightweight approach to continuou
 
 ---
 
+## 11. Key Architectural Decisions
+
+To ensure this system is robust for real-world clinical evaluation, several key engineering decisions were made:
+
+1. **Decoupling Perception from Reasoning (Feature Caching)**
+   - *The Decision:* We run YOLO once, cache the raw geometry (keypoints, bounding boxes) to a JSONL file, and execute all temporal logic on that cache.
+   - *Why:* It allows us to tune temporal thresholds and re-run the entire 190-second logic pipeline in under 2 seconds on a CPU, enabling rapid iteration without re-rendering video frames.
+
+2. **Constrained Viterbi Decoding**
+   - *The Decision:* We feed frame probabilities into a Viterbi pathfinding algorithm restricted by an "Allowed Transition Graph."
+   - *Why:* Frame-by-frame analysis flickers wildly. Our graph enforces physical reality (e.g., a person cannot transition directly from `LYING_ON_FLOOR` to `LYING_IN_BED` without standing or sitting first), mathematically eliminating impossible state flickering.
+
+3. **Manual Bed Calibration vs. Auto-Segmentation**
+   - *The Decision:* We require manual 4-point calibration of the mattress top rather than relying on automatic AI bed detection.
+   - *Why:* AI segmentation masks (like YOLO-Seg) are generic and include bed skirts and legs down to the floor. If a patient falls next to the bed, their hips land inside that extended mask, tricking the system into a false `NORMAL` state. A manual polygon explicitly isolates the top surface, guaranteeing floor falls trigger an `ALERT`.
+
+4. **First-Class `UNKNOWN` Abstention State**
+   - *The Decision:* We explicitly added an `UNKNOWN` state instead of forcing the model to guess the most likely pose when evidence is poor.
+   - *Why:* In healthcare, an incorrect guess is dangerous. When a patient is occluded (e.g., behind curtains), classifying the state as `UNKNOWN` acknowledges ambiguity and prevents hallucinating false safety, allowing the system to flag a warning if the occlusion lasts too long.
+
+5. **Multi-Tiered Alert Policy (NORMAL / MONITOR / ALERT)**
+   - *The Decision:* We implemented a three-tier contextual alert engine rather than a binary fall detector.
+   - *Why:* Elder care requires early intervention. Sitting on the edge of the bed for 5 minutes isn't an emergency, but implies dizziness or weakness. The `MONITOR` tier catches these behavioral anomalies *before* a fall occurs.
+
+---
+
 ## License
 Apache-2.0
