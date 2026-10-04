@@ -185,7 +185,7 @@ python -m bedwatch.cli process --video path/to/patient_video.mp4
 python -m bedwatch.cli process --video path/to/patient_video.mp4 --no-render
 ```
 
-> **Note on `og.mp4`**: The benchmark video (`og.mp4`) used in the commands below is not included in the repository due to size and privacy constraints. Please use your own videos.
+> **Note on `og.mp4`**: The benchmark video (`og.mp4`) used in the commands below is not included in the repository due to size and privacy constraints. Reviewers can access the original video via this [Google Drive link](https://drive.google.com/file/d/1oL98z-S74p6PzLZivQx9mPAtj5VvsZDq/view?usp=drive_link). Once downloaded, please save the video directly in the root directory of this project (as `Bedwatch/og.mp4`) to run the example commands below. Please use your own videos for general testing.
 
 **How Bedwatch handles new videos:**
 1. **Bed Geometry:** Bedwatch looks for a camera-specific manual config (`configs/views_<video_stem>.yaml`). If one doesn't exist, it will fallback to automatic YOLO bed-detection (with mitigations like mattress trimming and multi-frame consensus), but **manual calibration is strongly recommended** for clinical safety.
