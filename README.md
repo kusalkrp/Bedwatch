@@ -159,58 +159,11 @@ The system produces three discrete safety decisions:
 
 ### Prerequisites
 - Python 3.10+ (tested on Python 3.11 and 3.12)
-- NVIDIA GPU with CUDA support (tested on RTX 3060 Laptop GPU, 6 GB VRAM) or CPU
-- Docker (optional, for containerized execution)
-- Windows / Linux / macOS
-
-### Option A: Local Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/kusalkrp/Bedwatch.git
-cd Bedwatch
-
-# (Optional) Create and activate virtual environment
-python -m venv .venv
-# Linux/macOS: source .venv/bin/activate
-# Windows: .venv\Scripts\Activate.ps1
-
 # Install package in editable mode
 pip install -e .
 ```
 
-### Option B: Docker Container
-
-A production `Dockerfile` is included for fully reproducible containerized runs.
-
-> ⚠️ **Important GUI Note for New Videos:** The `process` command interactively pops up a window for you to draw the bed polygon on the first frame of a *new* video. Because Docker containers cannot natively open UI windows on your host monitor without complex X11 display mapping, you must either:
-> 1. Run the `define-bed` command natively on your host machine *first* to generate the `configs/views_<video>.yaml` configuration, OR
-> 2. Process videos that already have an existing configuration (like `og.mp4` or `test_3.mp4`).
-
-```bash
-# Build the Docker image
-docker build -t bedwatch:latest .
-
-# 1. Process a video end-to-end (GPU accelerated, assuming views config exists)
-docker run --rm --gpus all \
-  -v "${PWD}/cache:/app/cache" \
-  -v "${PWD}/outputs:/app/outputs" \
-  -v "${PWD}/my_video.mp4:/app/my_video.mp4" \
-  bedwatch:latest process --video my_video.mp4 --out outputs/
-
-# 2. Run ground-truth evaluation in container
-docker run --rm -v "${PWD}/outputs:/app/outputs" bedwatch:latest evaluate
-
-# 3. Run fast CPU reasoning pipeline on cached features
-docker run --rm \
-  -v "${PWD}/outputs:/app/outputs" \
-  -v "${PWD}/cache:/app/cache" \
-  bedwatch:latest analyze --video og.mp4 --cache cache/og_features.jsonl --profile demo --out outputs/
-```
-
----
-
-### Running the CLI (Native)
+### Running the CLI
 
 #### 🚀 Primary Command: Process Any New Video End-to-End
 To analyze **any new video**, use the unified `process` command. It runs perception, temporal decoding, agent verification, event detection, and video rendering in a single command:
