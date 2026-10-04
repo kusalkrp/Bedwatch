@@ -93,16 +93,16 @@ stateDiagram-v2
 
 Events are detected from contiguous state chains and geometric displacement:
 - **`BED_EXIT`**:
-  $$\text{In Bed (Lying / Sitting)} \longrightarrow \text{Standing} \longrightarrow \text{Moving away from bed / Out of bed}$$
-  - Confirmed once distance to bed increases by $\ge 0.5\text{ body heights}$ or person leaves view.
+  `[In Bed (Lying / Sitting)] ⟶ [Standing] ⟶ [Moving away from bed / Out of bed]`
+  - Confirmed once distance to bed increases by ≥ 0.5 body heights or person leaves view.
   - Negative situations suppressed: turning in bed, sitting up, brief stand-and-sit-back, and aborted exits (one step then sitting back down).
 - **`RETURN_TO_BED`**:
-  $$\text{Out of bed} \longrightarrow \text{Approach bed} \longrightarrow \text{Sit on bed} \longrightarrow \text{Lie down in bed}$$
-  - Confirmed after lying down on mattress for $\ge 2.0\text{s}$.
+  `[Out of bed] ⟶ [Approach bed] ⟶ [Sit on bed] ⟶ [Lie down in bed]`
+  - Confirmed after lying down on mattress for ≥ 2.0s.
   - Negative situations suppressed: visiting bed edge without lying down (false return attempt).
 - **`FLOOR_LYING`**:
-  $$\text{Any non-floor state} \longrightarrow \text{LYING\_ON\_FLOOR}$$
-  - Confirmed after $\ge 2.0\text{s}$ on floor $\implies$ Triggers immediate **`ALERT`**.
+  `[Any non-floor state] ⟶ [LYING_ON_FLOOR]`
+  - Confirmed after ≥ 2.0s on floor ⟹ Triggers immediate **`ALERT`**.
 
 ---
 
