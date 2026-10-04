@@ -181,18 +181,22 @@ pip install -e .
 
 ### Option B: Docker Container
 
-A production `Dockerfile` is included for fully reproducible containerized runs:
+A production `Dockerfile` is included for fully reproducible containerized runs.
+
+> ⚠️ **Important GUI Note for New Videos:** The `process` command interactively pops up a window for you to draw the bed polygon on the first frame of a *new* video. Because Docker containers cannot natively open UI windows on your host monitor without complex X11 display mapping, you must either:
+> 1. Run the `define-bed` command natively on your host machine *first* to generate the `configs/views_<video>.yaml` configuration, OR
+> 2. Process videos that already have an existing configuration (like `og.mp4` or `test_3.mp4`).
 
 ```bash
 # Build the Docker image
 docker build -t bedwatch:latest .
 
-# 1. Process any new video end-to-end (GPU accelerated)
+# 1. Process a video end-to-end (GPU accelerated, assuming views config exists)
 docker run --rm --gpus all \
   -v "${PWD}/cache:/app/cache" \
   -v "${PWD}/outputs:/app/outputs" \
   -v "${PWD}/my_video.mp4:/app/my_video.mp4" \
-  bedwatch:latest process --video my_video.mp4 --out outputs/my_video/
+  bedwatch:latest process --video my_video.mp4 --out outputs/
 
 # 2. Run ground-truth evaluation in container
 docker run --rm -v "${PWD}/outputs:/app/outputs" bedwatch:latest evaluate
